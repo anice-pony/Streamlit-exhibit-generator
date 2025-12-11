@@ -106,6 +106,67 @@ st.markdown("""
         font-size: 0.9rem;
         color: #666;
     }
+    .exhibit-card {
+        border: 1px solid #e3e6f0;
+        border-radius: 0.6rem;
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.85rem;
+        background-color: #ffffff;
+        box-shadow: 0 2px 4px rgba(15, 23, 42, 0.04);
+        transition: box-shadow 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+    }
+    .exhibit-card:hover {
+        border-color: #cbd5f5;
+        box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+        transform: translateY(-1px);
+    }
+    .exhibit-card-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-bottom: 0.25rem;
+    }
+    .exhibit-number {
+        font-weight: 600;
+        color: #1f2937;
+        min-width: 2rem;
+        padding: 0.15rem 0.55rem;
+        border-radius: 999px;
+        background-color: #e5edff;
+        border: 1px solid #c3d4ff;
+        font-size: 0.8rem;
+    }
+    .exhibit-title {
+        font-weight: 500;
+        color: #333;
+        flex: 1 1 auto;
+        word-break: break-word;
+    }
+    .exhibit-meta {
+        font-size: 0.82rem;
+        color: #555;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.85rem;
+        margin-top: 0.15rem;
+    }
+    .exhibit-meta span {
+        white-space: nowrap;
+    }
+    @media (max-width: 768px) {
+        .exhibit-card {
+            padding: 0.75rem;
+        }
+        .exhibit-meta {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .exhibit-meta span {
+            white-space: normal;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1655,67 +1716,49 @@ def main():
             end_idx = min(start_idx + items_per_page, total_exhibits)
             displayed_exhibits = st.session_state.exhibit_list[start_idx:end_idx]
             
-            # Display exhibits in table format with action buttons integrated
+            # Display exhibits in a responsive card layout with action buttons integrated
             if total_exhibits > 0:
-                # Create table header with action column
-                header_col1, header_col2, header_col3, header_col4, header_col5, header_col6 = st.columns([0.35, 1.8, 1.8, 0.6, 0.8, 1.2])
-                
-                with header_col1:
-                    st.markdown("**#**")
-                with header_col2:
-                    st.markdown("**Title**")
-                with header_col3:
-                    st.markdown("**File**")
-                with header_col4:
-                    st.markdown("**Pages**")
-                with header_col5:
-                    st.markdown("**Compression**")
-                with header_col6:
-                    st.markdown("**Actions**")
-                
-                st.divider()
-                
-                # Display each exhibit row with action buttons
                 for idx, exhibit in enumerate(displayed_exhibits):
                     actual_idx = start_idx + idx
                     move_up_disabled = (actual_idx == 0)
                     move_down_disabled = (actual_idx == total_exhibits - 1)
-                    
-                    row_col1, row_col2, row_col3, row_col4, row_col5, row_col6 = st.columns([0.35, 1.8, 1.8, 0.6, 0.8, 1.2])
-                    
+
                     compression_info = "-"
                     if 'compression' in exhibit and exhibit['compression']:
                         compression_info = f"{exhibit['compression']['reduction']:.1f}%"
-                    
-                    with row_col1:
-                        st.write(exhibit['number'])
-                    
-                    with row_col2:
-                        title_display = exhibit['title'][:35] + "..." if len(exhibit['title']) > 35 else exhibit['title']
-                        beneficiary = st.session_state.get('beneficiary_name')
-                        year_str = datetime.now().strftime('%Y')
-                        visa_str = visa_type.replace("-", "")
-                        dynamic_filename = f"{title_display}_{beneficiary}_{visa_str}_{year_str}.pdf"
-                        st.write(dynamic_filename)
-                    
-                    with row_col3:
-                        file_display = exhibit['filename'][:30] + "..." if len(exhibit['filename']) > 30 else exhibit['filename']
-                        beneficiary = st.session_state.get('beneficiary_name')
-                        year_str = datetime.now().strftime('%Y')
-                        visa_str = visa_type.replace("-", "")
-                        dynamic_filename = f"{title_display}_{beneficiary}_{visa_str}_{year_str}.pdf"
-                        st.write(dynamic_filename)
-                    
-                    with row_col4:
-                        st.write(exhibit.get('pages', '-'))
-                    
-                    with row_col5:
-                        st.write(compression_info)
-                    
-                    with row_col6:
-                        btn_col1, btn_col2 = st.columns([1, 1], gap="small")
+
+                    title_display = exhibit['title'][:35] + "..." if len(exhibit['title']) > 35 else exhibit['title']
+                    file_display = exhibit['filename'][:30] + "..." if len(exhibit['filename']) > 30 else exhibit['filename']
+                    beneficiary = st.session_state.get('beneficiary_name')
+                    year_str = datetime.now().strftime('%Y')
+                    visa_str = visa_type.replace("-", "")
+                    dynamic_filename = f"{title_display}_{beneficiary}_{visa_str}_{year_str}.pdf"
+
+                    card_col, action_col = st.columns([5, 1])
+
+                    with card_col:
+                        st.markdown(
+                            f"""
+                            <div class="exhibit-card">
+                                <div class="exhibit-card-header">
+                                    <span class="exhibit-number">{exhibit['number']}</span>
+                                    <span class="exhibit-title">{dynamic_filename}</span>
+                                </div>
+                                <div class="exhibit-meta">
+                                    <span><strong>File:</strong> {file_display}</span>
+                                    <span><strong>Pages:</strong> {exhibit.get('pages', '-')}</span>
+                                    <span><strong>Compression:</strong> {compression_info}</span>
+                                </div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+
+                    with action_col:
+                        st.markdown(" ")  # small top spacing
+                        btn_col1, btn_col2 = st.columns(2)
                         with btn_col1:
-                            if st.button("↑", key=f"up_{actual_idx}", disabled=move_up_disabled, help="Move up"):
+                            if st.button("↑", key=f"up_{actual_idx}", disabled=move_up_disabled, help="Move up", use_container_width=True):
                                 st.session_state.exhibit_list[actual_idx], st.session_state.exhibit_list[actual_idx - 1] = \
                                     st.session_state.exhibit_list[actual_idx - 1], st.session_state.exhibit_list[actual_idx]
                                 numbering_style = st.session_state.current_numbering_style
@@ -1727,9 +1770,9 @@ def main():
                                     else:
                                         ex['number'] = to_roman(i + 1)
                                 st.rerun()
-                        
+
                         with btn_col2:
-                            if st.button("↓", key=f"down_{actual_idx}", disabled=move_down_disabled, help="Move down"):
+                            if st.button("↓", key=f"down_{actual_idx}", disabled=move_down_disabled, help="Move down", use_container_width=True):
                                 st.session_state.exhibit_list[actual_idx], st.session_state.exhibit_list[actual_idx + 1] = \
                                     st.session_state.exhibit_list[actual_idx + 1], st.session_state.exhibit_list[actual_idx]
                                 numbering_style = st.session_state.current_numbering_style
