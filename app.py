@@ -15,6 +15,7 @@ This guide provides:
 - Production-tested petition structures
 """
 
+from gc import disable
 import streamlit as st
 import os
 import tempfile
@@ -139,6 +140,10 @@ if 'show_results_message' not in st.session_state:
     st.session_state.show_results_message = False
 if 'force_results_tab' not in st.session_state:
     st.session_state.force_results_tab = False
+if 'upload_files_page' not in st.session_state:
+    st.session_state.upload_files_page = 1
+if "selected_tab" not in st.session_state:
+    st.session_state.selected_tab = "📁 Upload Files"
 
 def extract_drive_download_url(drive_url: str) -> str:
     """
@@ -544,7 +549,6 @@ def generate_exhibits_from_urls(
                 
                 # Show success message with auto-navigation
                 st.success("🎉 **Generation Complete!** Automatically navigating to Results tab...")
-                st.balloons()
                 
                 st.rerun()
 
@@ -749,8 +753,7 @@ def generate_exhibits_from_drive(
                 st.session_state.show_results_message = True  # Show navigation message
                 
                 # Show success message with auto-navigation
-                st.success("🎉 **Generation Complete!** Automatically navigating to Results tab...")
-                st.balloons()
+                st.success("🎉 **Generation Complete!** Automatically navigating to Results tab...")                
                 
                 st.rerun()
 
@@ -918,13 +921,90 @@ def main():
             ⚠️ **Important:** P-1A has NO comparable evidence provision
             """)
 
-    # Main content area
-    tab1, tab2, tab3 = st.tabs(["📁 Upload Files", "☁️ Google Drive", "📊 Results"])
+    tab1, tab2, tab3 = st.columns(3)
+
+    with tab1:
+        if st.button("📁 Upload Files", use_container_width=True, key="tab1_active"):
+            st.session_state.selected_tab = "📁 Upload Files"
+            st.rerun()
+
+    with tab2:
+        if st.button("☁️ Google Drive", use_container_width=True, key="tab2_active"):
+            st.session_state.selected_tab = "☁️ Google Drive"
+            st.rerun()
+
+    with tab3:
+        if st.button("📊 Results", use_container_width=True, key="tab3_active"):
+            st.session_state.selected_tab = "📊 Results"
+            st.rerun()
+            
+    current_tab = st.radio(
+        "",
+        ["📁 Upload Files", "☁️ Google Drive", "📊 Results"],
+        index=["📁 Upload Files", "☁️ Google Drive", "📊 Results"].index(
+            st.session_state.selected_tab
+        ),
+        label_visibility="hidden"
+    )
+    st.markdown("""
+    <style>
+        div.stRadio { 
+            display: none !important;
+        }
+        div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
+            display: flex !important;
+            justify-content: center !important;
+        }
+
+        .stButton > button.st-emotion-cache-5qfegl {
+            background: transparent !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+
+            padding: 6px 12px !important;
+            margin: 0 30px !important;         
+
+            font-size: 15px !important;
+            font-weight: 500 !important;
+            color: #595959 !important;
+            cursor: pointer !important;
+
+            display: flex !important;
+            align-items: center !important;     
+            justify-content: center !important;
+
+            border-bottom: 2px solid transparent !important;
+        }
+
+        .stButton > button.st-emotion-cache-5qfegl:hover {
+            color: #1890ff !important;
+            border-bottom: 2px solid #d9d9d9 !important;
+        }
+
+        .element-container.st-key-tab1_active button,
+        .element-container.st-key-tab2_active button,
+        .element-container.st-key-tab3_active button {
+            color: #1890ff !important;
+            font-weight: 600 !important;
+            border-bottom: 3px solid #1890ff !important;
+        }
+
+        .stButton > button:focus {
+            box-shadow: none !important;
+            outline: none !important;
+        }
+    </style>
+        """, unsafe_allow_html=True)
+
+
+
+
 
     # ==========================================
     # TAB 1: FILE UPLOAD
     # ==========================================
-    with tab1:
+    if current_tab == "📁 Upload Files":
         st.header("Upload PDF Files")
 
         upload_method = st.radio(
@@ -934,7 +1014,6 @@ def main():
         )
 
         uploaded_files = []
-
         if upload_method == "Individual PDFs":
             uploaded_files = st.file_uploader(
                 "Select PDF files",
@@ -1063,9 +1142,9 @@ def main():
         if uploaded_files:
             st.success(f"✓ {len(uploaded_files)} files uploaded")
 
-            with st.expander("📄 View uploaded files"):
-                for i, file in enumerate(uploaded_files, 1):
-                    st.write(f"{i}. {file.name} ({file.size / 1024:.1f} KB)")
+            # with st.expander("📄 View uploaded files"):
+            #     for i, file in enumerate(uploaded_files, 1):
+            #         st.write(f"{i}. {file.name} ({file.size / 1024:.1f} KB)")
 
         # Generate button
         zip_ready = (upload_method == "ZIP Archive" and 
@@ -1077,7 +1156,7 @@ def main():
         
         if uploaded_files or zip_ready or url_ready:
             st.divider()
-
+            
             if st.button("🚀 Generate Exhibits", type="primary", use_container_width=True):
                 # Handle URL downloads
                 if upload_method == "URL Links" and url_ready:
@@ -1114,7 +1193,7 @@ def main():
     # ==========================================
     # TAB 2: GOOGLE DRIVE
     # ==========================================
-    with tab2:
+    elif current_tab == "☁️ Google Drive":
         st.header("☁️ Google Drive Integration")
         st.info("💡 Connect to Google Drive to process folders directly. Public folders work without authentication!")
 
@@ -1241,7 +1320,6 @@ def main():
                                             st.session_state.drive_authenticated = True
                                             st.session_state.oauth_auth_url = None
                                             st.success("✅ Successfully authenticated!")
-                                            st.balloons()
                                             st.info("🎉 You're all set! You can now load files from private Google Drive folders.")
                                             st.rerun()
                                         except Exception as e:
@@ -1394,7 +1472,7 @@ def main():
     # ==========================================
     # TAB 3: RESULTS
     # ==========================================
-    with tab3:
+    elif current_tab == "📊 Results":
         st.header("Generation Results")
 
         if st.session_state.exhibits_generated:
@@ -1507,7 +1585,7 @@ def main():
                     st.caption("Note: Reordering updates display. Regenerate PDF to apply new order to final package.")
             
             # Pagination settings
-            items_per_page = 12
+            items_per_page = 10
             total_exhibits = len(st.session_state.exhibit_list)
             total_pages = (total_exhibits + items_per_page - 1) // items_per_page if total_exhibits > 0 else 1
             
@@ -1548,56 +1626,85 @@ def main():
             end_idx = min(start_idx + items_per_page, total_exhibits)
             displayed_exhibits = st.session_state.exhibit_list[start_idx:end_idx]
             
-            # Display exhibits with reordering controls
-            for idx, exhibit in enumerate(displayed_exhibits):
-                actual_idx = start_idx + idx
-                col1, col2 = st.columns([8, 1])
+            # Display exhibits in table format with action buttons integrated
+            if total_exhibits > 0:
+                # Create table header with action column
+                header_col1, header_col2, header_col3, header_col4, header_col5, header_col6 = st.columns([0.35, 1.8, 1.8, 0.6, 0.8, 1.2])
                 
-                with col1:
-                    with st.expander(f"Exhibit {exhibit['number']}: {exhibit['title']}"):
-                        st.write(f"**Original File**: {exhibit['filename']}")
-                        st.write(f"**Pages**: {exhibit.get('pages', 'Unknown')}")
-                        if 'compression' in exhibit and exhibit['compression']:
-                            st.write(f"**Compressed**: {exhibit['compression']['reduction']:.1f}% reduction")
-                            st.write(f"**Method**: {exhibit['compression']['method']}")
+                with header_col1:
+                    st.markdown("**#**")
+                with header_col2:
+                    st.markdown("**Title**")
+                with header_col3:
+                    st.markdown("**File**")
+                with header_col4:
+                    st.markdown("**Pages**")
+                with header_col5:
+                    st.markdown("**Compression**")
+                with header_col6:
+                    st.markdown("**Actions**")
                 
-                with col2:
-                    # Reordering buttons
-                    if total_exhibits > 1:
-                        move_up_disabled = (actual_idx == 0)
-                        move_down_disabled = (actual_idx == total_exhibits - 1)
+                st.divider()
+                
+                # Display each exhibit row with action buttons
+                for idx, exhibit in enumerate(displayed_exhibits):
+                    actual_idx = start_idx + idx
+                    move_up_disabled = (actual_idx == 0)
+                    move_down_disabled = (actual_idx == total_exhibits - 1)
+                    
+                    row_col1, row_col2, row_col3, row_col4, row_col5, row_col6 = st.columns([0.35, 1.8, 1.8, 0.6, 0.8, 1.2])
+                    
+                    compression_info = "-"
+                    if 'compression' in exhibit and exhibit['compression']:
+                        compression_info = f"{exhibit['compression']['reduction']:.1f}%"
+                    
+                    with row_col1:
+                        st.write(exhibit['number'])
+                    
+                    with row_col2:
+                        title_display = exhibit['title'][:35] + "..." if len(exhibit['title']) > 35 else exhibit['title']
+                        st.write(title_display)
+                    
+                    with row_col3:
+                        file_display = exhibit['filename'][:30] + "..." if len(exhibit['filename']) > 30 else exhibit['filename']
+                        st.write(file_display)
+                    
+                    with row_col4:
+                        st.write(exhibit.get('pages', '-'))
+                    
+                    with row_col5:
+                        st.write(compression_info)
+                    
+                    with row_col6:
+                        btn_col1, btn_col2 = st.columns([1, 1], gap="small")
+                        with btn_col1:
+                            if st.button("↑", key=f"up_{actual_idx}", disabled=move_up_disabled, help="Move up"):
+                                st.session_state.exhibit_list[actual_idx], st.session_state.exhibit_list[actual_idx - 1] = \
+                                    st.session_state.exhibit_list[actual_idx - 1], st.session_state.exhibit_list[actual_idx]
+                                numbering_style = st.session_state.current_numbering_style
+                                for i, ex in enumerate(st.session_state.exhibit_list):
+                                    if numbering_style == "letters":
+                                        ex['number'] = chr(65 + i)
+                                    elif numbering_style == "numbers":
+                                        ex['number'] = str(i + 1)
+                                    else:
+                                        ex['number'] = to_roman(i + 1)
+                                st.rerun()
                         
-                        if st.button("↑", key=f"up_{actual_idx}", disabled=move_up_disabled, help="Move up"):
-                            # Swap with previous item
-                            st.session_state.exhibit_list[actual_idx], st.session_state.exhibit_list[actual_idx - 1] = \
-                                st.session_state.exhibit_list[actual_idx - 1], st.session_state.exhibit_list[actual_idx]
-                            # Update exhibit numbers based on new order
-                            numbering_style = st.session_state.current_numbering_style
-                            for i, ex in enumerate(st.session_state.exhibit_list):
-                                if numbering_style == "letters":
-                                    ex['number'] = chr(65 + i)
-                                elif numbering_style == "numbers":
-                                    ex['number'] = str(i + 1)
-                                else:
-                                    ex['number'] = to_roman(i + 1)
-                            st.rerun()
-                        
-                        if st.button("↓", key=f"down_{actual_idx}", disabled=move_down_disabled, help="Move down"):
-                            # Swap with next item
-                            st.session_state.exhibit_list[actual_idx], st.session_state.exhibit_list[actual_idx + 1] = \
-                                st.session_state.exhibit_list[actual_idx + 1], st.session_state.exhibit_list[actual_idx]
-                            # Update exhibit numbers based on new order
-                            numbering_style = st.session_state.current_numbering_style
-                            for i, ex in enumerate(st.session_state.exhibit_list):
-                                if numbering_style == "letters":
-                                    ex['number'] = chr(65 + i)
-                                elif numbering_style == "numbers":
-                                    ex['number'] = str(i + 1)
-                                else:
-                                    ex['number'] = to_roman(i + 1)
-                            st.rerun()
-            
-            if total_exhibits == 0:
+                        with btn_col2:
+                            if st.button("↓", key=f"down_{actual_idx}", disabled=move_down_disabled, help="Move down"):
+                                st.session_state.exhibit_list[actual_idx], st.session_state.exhibit_list[actual_idx + 1] = \
+                                    st.session_state.exhibit_list[actual_idx + 1], st.session_state.exhibit_list[actual_idx]
+                                numbering_style = st.session_state.current_numbering_style
+                                for i, ex in enumerate(st.session_state.exhibit_list):
+                                    if numbering_style == "letters":
+                                        ex['number'] = chr(65 + i)
+                                    elif numbering_style == "numbers":
+                                        ex['number'] = str(i + 1)
+                                    else:
+                                        ex['number'] = to_roman(i + 1)
+                                st.rerun()
+            else:
                 st.info("No exhibits to display")
 
             # Download button
@@ -1845,14 +1952,14 @@ def generate_exhibits(
                 status_text.text("✓ Generation complete!")
 
                 st.session_state.exhibits_generated = True
-                st.session_state.active_tab = 2  # Mark to navigate to Results tab
+                st.session_state.selected_tab = "📊 Results"
                 st.session_state.show_results_message = True  # Show navigation message
                 
                 # Show success message with auto-navigation
                 st.success("🎉 **Generation Complete!** Automatically navigating to Results tab...")
-                st.balloons()
                 
                 st.rerun()
+
 
         except Exception as e:
             st.error(f"❌ Error generating exhibits: {str(e)}")
